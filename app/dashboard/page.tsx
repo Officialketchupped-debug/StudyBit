@@ -1,141 +1,201 @@
-'use client';
+"use client";
 
-import { useEffect, useState } from 'react';
-import { supabase } from '@/lib/supabase/client';
-import { Flame, Play, CheckCircle2, Users, BarChart } from 'lucide-react';
+import React, { useState, useEffect } from "react";
+import { supabase } from "@/lib/supabase/client";
+import { Flame, Play, Square, Users, BarChart3, Clock, LogOut } from "lucide-react";
+import { Button } from "@/components/ui/button";
 
 export default function Dashboard() {
-  const [userProfile, setUserProfile] = useState<any>(null);
-  const [isStudying, setIsStudying] = useState(false);
   const [seconds, setSeconds] = useState(0);
+  const [isActive, setIsActive] = useState(false);
+  const [user, setUser] = useState<any>(null);
+  const [totalMinutes, setTotalMinutes] = useState(0);
 
-  // 1. Fetch User Data
+  const MINIMUM_MINUTES = 30;
+  const MINIMUM_SECONDS = MINIMUM_MINUTES * 60;
+
+  // 1. Fetch user profile and total study time
   useEffect(() => {
-    const getUser = async () => {
+    const fetchUserData = async () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (user) {
-        const { data } = await supabase
-          .from('profiles')
-          .select('*')
-          .eq('id', user.id)
+        setUser(user);
+        const { data: profile } = await supabase
+          .from("profiles")
+          .select("overall_study_minutes")
+          .eq("id", user.id)
           .single();
-        setUserProfile(data);
+        if (profile) setTotalMinutes(profile.overall_study_minutes);
       }
     };
-    getUser();
+    fetchUserData();
   }, []);
 
-  // 2. Timer Logic (Simplified)
+  // 2. Timer Logic
   useEffect(() => {
-    let interval: any;
-    if (isStudying) {
-      interval = setInterval(() => setSeconds(s => s + 1), 1000);
+    let interval: any = null;
+    if (isActive) {
+      interval = setInterval(() => {
+        setSeconds((prev) => prev + 1);
+      }, 1000);
+    } else {
+      clearInterval(interval);
     }
     return () => clearInterval(interval);
-  }, [isStudying]);
+  }, [isActive]);
 
-  const formatTime = (sec: number) => {
-    const m = Math.floor(sec / 60);
-    const s = sec % 60;
-    return `${m}:${s < 10 ? '0' : ''}${s}`;
+  const formatTime = (totalSeconds: number) => {
+    const h = Math.floor(totalSeconds / 3600);
+    const m = Math.floor((totalSeconds % 3600) / 60);
+    const s = totalSeconds % 60;
+    return `${h > 0 ? h + ":" : ""}${m < 10 && h > 0 ? "0" : ""}${m}:${s < 10 ? "0" : ""}${s}`;
+  };
+
+  const handleStop = async () => {
+    setIsActive(false);
+    const sessionMinutes = Math.floor(seconds / 60);
+
+    if (seconds < MINIMUM_SECONDS) {
+      alert(`Session ended. You studied for ${sessionMinutes} minutes. Remember: You need 30 minutes to count toward the group streak!`);
+    } else {
+      // Logic for successful session
+      const { error } = await supabase.from("study_sessions").insert({
+        user_id: user.id,
+        duration_minutes: sessionMinutes,
+      });
+
+      if (!error) {
+        const newTotal = totalMinutes + sessionMinutes;
+        await supabase.from("profiles").update({ overall_study_minutes: newTotal }).eq("id", user.id);
+        setTotalMinutes(newTotal);
+        alert("Awesome! 30-minute goal reached. Your group streak continues!");
+      }
+    }
+    setSeconds(0);
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col md:flex-row">
-      {/* Sidebar Navigation */}
-      <aside className="w-full md:w-64 bg-white border-r border-gray-200 p-6 flex flex-col">
-        <h1 className="text-xl font-bold text-indigo-600 mb-8">StudyBit</h1>
-        <nav className="space-y-4 flex-1">
-          <button className="flex items-center gap-3 text-indigo-600 font-semibold w-full">
-            <Timer size={20} /> Dashboard
+    <div className="min-h-screen bg-slate-50 flex flex-col md:flex-row">
+      {/* Sidebar */}
+      <aside className="w-full md:w-64 bg-white border-r border-slate-200 p-6 flex flex-col">
+        <div className="flex items-center gap-2 mb-10">
+          <Flame className="w-6 h-6 text-orange-600 fill-current" />
+          <h1 className="text-xl font-bold text-slate-800 tracking-tight">StudyBit</h1>
+        </div>
+        
+        <nav className="flex-1 space-y-2">
+          <button className="w-full flex items-center gap-3 px-4 py-3 bg-orange-50 text-orange-600 rounded-xl font-bold">
+            <Clock size={20} /> Timer
           </button>
-          <button className="flex items-center gap-3 text-gray-500 hover:text-indigo-600 w-full">
+          <button className="w-full flex items-center gap-3 px-4 py-3 text-slate-500 hover:bg-slate-50 rounded-xl font-medium transition">
             <Users size={20} /> Groups
           </button>
-          <button className="flex items-center gap-3 text-gray-500 hover:text-indigo-600 w-full">
-            <BarChart size={20} /> Statistics
+          <button className="w-full flex items-center gap-3 px-4 py-3 text-slate-500 hover:bg-slate-50 rounded-xl font-medium transition">
+            <BarChart3 size={20} /> Stats
           </button>
         </nav>
-        
-        {userProfile && (
-          <div className="pt-6 border-t border-gray-100 flex items-center gap-3">
-            <img src={userProfile.avatar_url} className="w-10 h-10 rounded-full" alt="Profile" />
-            <div className="truncate">
-              <p className="text-sm font-bold truncate">{userProfile.username}</p>
-              <p className="text-xs text-gray-500">Scholar</p>
-            </div>
-          </div>
-        )}
+
+        <button 
+          onClick={() => supabase.auth.signOut()}
+          className="mt-auto flex items-center gap-3 px-4 py-3 text-slate-400 hover:text-red-500 transition font-medium"
+        >
+          <LogOut size={20} /> Logout
+        </button>
       </aside>
 
-      {/* Main Content Area */}
-      <main className="flex-1 p-8 overflow-y-auto">
+      {/* Main Content */}
+      <main className="flex-1 p-6 md:p-12 overflow-y-auto">
         <div className="max-w-4xl mx-auto space-y-8">
           
           {/* Header */}
-          <header className="flex justify-between items-end">
+          <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
             <div>
-              <h2 className="text-3xl font-bold">Welcome back!</h2>
-              <p className="text-gray-500">You need 30 minutes today to keep the streak alive.</p>
+              <h2 className="text-3xl font-bold text-slate-800">Hello, {user?.user_metadata?.display_name || "Scholar"}!</h2>
+              <p className="text-slate-500">Ready to contribute to the streak today?</p>
             </div>
-            <div className="bg-orange-100 text-orange-600 px-4 py-2 rounded-full flex items-center gap-2 font-bold">
-              <Flame size={20} /> 12 Day Streak
-            </div>
-          </header>
-
-          <div className="grid md:grid-cols-2 gap-8">
-            {/* Timer Card */}
-            <div className="bg-white p-8 rounded-3xl border border-gray-100 shadow-sm flex flex-col items-center justify-center text-center space-y-6">
-              <div className="relative w-48 h-48 flex items-center justify-center">
-                <svg className="absolute inset-0 w-full h-full -rotate-90">
-                  <circle cx="96" cy="96" r="88" stroke="currentColor" strokeWidth="8" fill="transparent" className="text-gray-100" />
-                  <circle cx="96" cy="96" r="88" stroke="currentColor" strokeWidth="8" fill="transparent" className="text-indigo-600" 
-                    strokeDasharray={553} strokeDashoffset={553 - (553 * (seconds / 1800))} strokeLinecap="round" />
-                </svg>
-                <span className="text-4xl font-mono font-bold">{formatTime(seconds)}</span>
-              </div>
-              
-              <button 
-                onClick={() => setIsStudying(!isStudying)}
-                className={`px-12 py-4 rounded-2xl font-bold text-lg transition-all flex items-center gap-2 ${
-                  isStudying ? 'bg-red-50 text-red-600 hover:bg-red-100' : 'bg-indigo-600 text-white hover:bg-indigo-700 shadow-indigo-200 shadow-lg'
-                }`}
-              >
-                {isStudying ? 'Stop Session' : <><Play size={20} fill="currentColor" /> Start Studying</>}
-              </button>
-              <p className="text-xs text-gray-400 font-medium tracking-wide">MINIMUM: 30 MINUTES</p>
-            </div>
-
-            {/* Group Streak Progress */}
-            <div className="bg-white p-8 rounded-3xl border border-gray-100 shadow-sm space-y-6">
-              <h3 className="font-bold text-lg flex items-center gap-2">
-                <Users size={18} className="text-indigo-600" /> VSU Dev Team
-              </h3>
-              <div className="space-y-4">
-                {[
-                  { name: 'Jonei', status: 'done', time: '45m' },
-                  { name: 'Lourennz', status: 'studying', time: '12m' },
-                  { name: 'You', status: 'pending', time: '0m' }
-                ].map((member) => (
-                  <div key={member.name} className="flex justify-between items-center p-3 rounded-xl bg-gray-50">
-                    <span className="font-medium">{member.name}</span>
-                    <div className="flex items-center gap-3">
-                      <span className="text-sm text-gray-500">{member.time}</span>
-                      {member.status === 'done' ? (
-                        <CheckCircle2 className="text-green-500" size={18} />
-                      ) : member.status === 'studying' ? (
-                        <div className="w-4 h-4 border-2 border-indigo-600 border-t-transparent rounded-full animate-spin" />
-                      ) : (
-                        <div className="w-4 h-4 rounded-full border-2 border-gray-300" />
-                      )}
-                    </div>
-                  </div>
-                ))}
-              </div>
-              <p className="text-sm text-gray-500 italic">"If everyone hits 30m, the flame stays alive!"</p>
+            <div className="flex items-center gap-2 px-5 py-2 bg-orange-100 text-orange-700 rounded-full font-bold shadow-sm">
+              <Flame size={20} className="fill-current" /> 14 Day Streak
             </div>
           </div>
 
+          <div className="grid md:grid-cols-3 gap-8">
+            {/* Main Timer Card */}
+            <div className="md:col-span-2 bg-white rounded-3xl p-10 shadow-sm border border-slate-100 flex flex-col items-center justify-center text-center space-y-8">
+              <div className="relative w-64 h-64 flex items-center justify-center">
+                {/* Circular Progress Bar */}
+                <svg className="absolute inset-0 w-full h-full -rotate-90">
+                  <circle cx="128" cy="128" r="120" stroke="currentColor" strokeWidth="12" fill="transparent" className="text-slate-100" />
+                  <circle 
+                    cx="128" cy="128" r="120" stroke="currentColor" strokeWidth="12" fill="transparent" 
+                    className="text-orange-500 transition-all duration-1000"
+                    strokeDasharray={754}
+                    strokeDashoffset={754 - (754 * Math.min(seconds / MINIMUM_SECONDS, 1))}
+                    strokeLinecap="round"
+                  />
+                </svg>
+                <div className="flex flex-col items-center">
+                  <span className="text-5xl font-mono font-bold text-slate-800">{formatTime(seconds)}</span>
+                  <span className="text-sm text-slate-400 font-bold uppercase tracking-widest mt-2">Target: 30:00</span>
+                </div>
+              </div>
+
+              <div className="flex gap-4 w-full max-w-xs">
+                {!isActive ? (
+                  <Button 
+                    onClick={() => setIsActive(true)}
+                    className="flex-1 bg-orange-600 hover:bg-orange-700 text-white h-14 rounded-2xl text-lg font-bold shadow-lg shadow-orange-200 flex items-center justify-center gap-2"
+                  >
+                    <Play size={24} fill="currentColor" /> Start
+                  </Button>
+                ) : (
+                  <Button 
+                    onClick={handleStop}
+                    className="flex-1 bg-slate-900 hover:bg-black text-white h-14 rounded-2xl text-lg font-bold flex items-center justify-center gap-2"
+                  >
+                    <Square size={20} fill="currentColor" /> Finish
+                  </Button>
+                )}
+              </div>
+            </div>
+
+            {/* Sidebar Cards */}
+            <div className="space-y-6">
+              {/* Stats Card */}
+              <div className="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm space-y-4">
+                <h3 className="font-bold text-slate-800 flex items-center gap-2">
+                  <BarChart3 size={18} className="text-orange-600" /> Lifetime Stats
+                </h3>
+                <div>
+                  <p className="text-3xl font-bold text-orange-600">{totalMinutes}</p>
+                  <p className="text-sm text-slate-400 font-medium">Total Minutes Studied</p>
+                </div>
+              </div>
+
+              {/* Group Pulse Card */}
+              <div className="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm space-y-4">
+                <h3 className="font-bold text-slate-800 flex items-center gap-2">
+                  <Users size={18} className="text-orange-600" /> VSU Dev Group
+                </h3>
+                <div className="space-y-3">
+                  {[
+                    { name: "Jonei", status: "Done" },
+                    { name: "Lourennz", status: "Studying" },
+                    { name: "You", status: isActive ? "Studying" : "Pending" }
+                  ].map((m) => (
+                    <div key={m.name} className="flex justify-between items-center text-sm">
+                      <span className="font-medium text-slate-600">{m.name}</span>
+                      <span className={`px-2 py-1 rounded-md text-[10px] font-bold uppercase ${
+                        m.status === "Done" ? "bg-green-100 text-green-600" : 
+                        m.status === "Studying" ? "bg-orange-100 text-orange-600 animate-pulse" : 
+                        "bg-slate-100 text-slate-400"
+                      }`}>{m.status}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+          
         </div>
       </main>
     </div>

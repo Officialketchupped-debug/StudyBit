@@ -74,3 +74,11 @@ export async function LoginWithGoogle(nextRoute = '/dashboard') {
     },
   });
 }
+
+export async function logoutUser() {
+  const { error } = await supabase.auth.signOut();
+  if (error) {
+    console.error("Logout Error:", error.message);
+    throw error;
+  }
+}

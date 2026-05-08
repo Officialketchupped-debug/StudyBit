@@ -29,7 +29,7 @@ export default function Success() {
             </div>
             <h1 className="text-2xl md:text-3xl font-bold text-gray-800 mb-4">Account Ready!</h1>
             <p className="text-gray-600 text-base mb-8">Your journey begins now. Start your first 30-minute session to contribute to the streak.</p>
-            <button onClick={() => router.push("/dashboard")} className="w-full bg-gradient-to-r from-orange-600 to-amber-600 hover:from-orange-700 hover:to-amber-700 text-white font-bold py-4 rounded-xl shadow-lg transition-transform hover:scale-[1.02]">
+            <button onClick={() => router.push("/dashboard/timer")} className="w-full bg-gradient-to-r from-orange-600 to-amber-600 hover:from-orange-700 hover:to-amber-700 text-white font-bold py-4 rounded-xl shadow-lg transition-transform hover:scale-[1.02]">
               Start Learning
             </button>
           </div>

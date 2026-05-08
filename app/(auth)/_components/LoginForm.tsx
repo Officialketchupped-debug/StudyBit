@@ -66,7 +66,7 @@ export const LoginForm: React.FC<LoginFormProps> = ({ className, ...props }) => 
         setMfaFactorId(result.factorId ?? null);
         return;
       }
-      if (result.user) router.push("/dashboard");
+      if (result.user) router.push("/dashboard/timer");
     } catch (err: any) {
       setGlobalError(err.message || "Login failed");
       setIsLoading(false);
