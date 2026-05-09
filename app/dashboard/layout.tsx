@@ -23,7 +23,7 @@ export default function DashboardLayout({
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
-    router.push("/login"); // Redirect to login after signing out
+    router.push("/login");
   };
 
   const navLinks = [
@@ -34,14 +34,21 @@ export default function DashboardLayout({
 
   return (
     <div className="flex h-screen bg-slate-50">
-      {/* Sidebar */}
-      <aside className="w-64 bg-white border-r border-slate-100 flex flex-col p-6 shadow-sm">
+      {/* SIDEBAR: 
+          - w-20 on small screens (icons only)
+          - md:w-64 on medium screens and up (full text)
+      */}
+      <aside className="w-20 md:w-64 bg-white border-r border-slate-100 flex flex-col p-4 md:p-6 shadow-sm transition-all duration-300">
+        
         {/* Branding */}
-        <div className="mb-10 flex items-center gap-2 px-2">
-          <div className="w-8 h-8 bg-orange-600 rounded-lg flex items-center justify-center">
+        <div className="mb-10 flex items-center gap-3 px-2">
+          <div className="min-w-[32px] w-8 h-8 bg-orange-600 rounded-lg flex items-center justify-center">
             <Flame size={18} className="text-white fill-current" />
           </div>
-          <h1 className="text-xl font-black text-slate-800 tracking-tighter">StudyBit</h1>
+          {/* Hidden on mobile, visible on MD+ */}
+          <h1 className="text-xl font-black text-slate-800 tracking-tighter hidden md:block">
+            StudyBit
+          </h1>
         </div>
 
         {/* Main Navigation */}
@@ -53,55 +60,65 @@ export default function DashboardLayout({
               <Link
                 key={link.name}
                 href={link.href}
-                className={`flex items-center gap-3 px-4 py-3 rounded-2xl font-bold transition-all ${
+                className={`flex items-center gap-3 px-3 md:px-4 py-3 rounded-2xl font-bold transition-all group ${
                   isActive
                     ? "bg-orange-50 text-orange-600 shadow-sm shadow-orange-100"
                     : "text-slate-400 hover:bg-slate-50 hover:text-slate-600"
                 }`}
               >
-                <Icon size={20} />
-                <span className="text-sm">{link.name}</span>
+                <div className="min-w-[20px] flex justify-center">
+                  <Icon size={20} />
+                </div>
+                {/* Hidden on mobile, visible on MD+ */}
+                <span className="text-sm hidden md:block whitespace-nowrap">
+                  {link.name}
+                </span>
               </Link>
             );
           })}
         </nav>
 
-        {/* Account Section (Pinned to Bottom) */}
+        {/* Account Section */}
         <div className="pt-6 border-t border-slate-50 mt-auto">
-          <p className="text-[10px] font-black text-slate-300 uppercase tracking-widest px-4 mb-4">
+          {/* Section Label: Only visible on MD+ */}
+          <p className="text-[10px] font-black text-slate-300 uppercase tracking-widest px-4 mb-4 hidden md:block">
             Account
           </p>
           
           {/* Profile Link */}
           <Link 
             href="/dashboard/profile"
-            className={`w-full flex items-center gap-3 px-4 py-3 rounded-2xl font-bold transition-all group ${
+            className={`w-full flex items-center gap-3 px-3 md:px-4 py-3 rounded-2xl font-bold transition-all group ${
               pathname === "/dashboard/profile" 
                 ? "bg-orange-50 text-orange-600 shadow-sm shadow-orange-100" 
                 : "text-slate-400 hover:bg-slate-50 hover:text-slate-600"
             }`}
           >
-            <div className={`w-8 h-8 rounded-lg flex items-center justify-center overflow-hidden border transition-colors ${
+            <div className={`min-w-[32px] w-8 h-8 rounded-lg flex items-center justify-center overflow-hidden border transition-colors ${
               pathname === "/dashboard/profile" ? "bg-white border-orange-200" : "bg-slate-100 border-slate-200"
             }`}>
               <User size={16} />
             </div>
-            <span className="text-sm">My Profile</span>
+            {/* Hidden on mobile, visible on MD+ */}
+            <span className="text-sm hidden md:block whitespace-nowrap">My Profile</span>
           </Link>
 
           {/* Logout Button */}
           <button 
             onClick={handleLogout}
-            className="w-full flex items-center gap-3 px-4 py-3 rounded-2xl font-bold text-slate-400 hover:text-red-500 hover:bg-red-50 transition-all mt-1"
+            className="w-full flex items-center gap-3 px-3 md:px-4 py-3 rounded-2xl font-bold text-slate-400 hover:text-red-500 hover:bg-red-50 transition-all mt-1"
           >
-            <LogOut size={20} />
-            <span className="text-sm">Sign Out</span>
+            <div className="min-w-[20px] flex justify-center">
+              <LogOut size={20} />
+            </div>
+            {/* Hidden on mobile, visible on MD+ */}
+            <span className="text-sm hidden md:block whitespace-nowrap">Sign Out</span>
           </button>
         </div>
       </aside>
 
       {/* Main Content Area */}
-      <main className="flex-1 overflow-y-auto p-8 lg:p-12">
+      <main className="flex-1 overflow-y-auto p-6 md:p-8 lg:p-12 transition-all">
         {children}
       </main>
     </div>
