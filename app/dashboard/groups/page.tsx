@@ -14,20 +14,24 @@ export default function GroupsPage() {
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
   
-  // Form States
   const [joinId, setJoinId] = useState("");
   const [newGroupName, setNewGroupName] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
     const init = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (user) {
-        setUser(user);
-        const userGroups = await getUserGroups(user.id);
-        setGroups(userGroups);
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user) {
+          setUser(user);
+          const userGroups = await getUserGroups(user.id);
+          setGroups(userGroups || []);
+        }
+      } catch (err) {
+        console.error("Error loading groups:", err);
+      } finally {
+        setLoading(false);
       }
-      setLoading(false);
     };
     init();
   }, []);
@@ -75,23 +79,26 @@ export default function GroupsPage() {
 
   if (loading) return (
     <div className="flex h-96 items-center justify-center">
-      <Loader2 className="w-8 h-8 text-orange-500 animate-spin" />
+      <div className="flex flex-col items-center gap-4">
+        <Loader2 className="w-8 h-8 text-orange-500 animate-spin" />
+        <p className="text-slate-400 text-xs font-bold uppercase tracking-widest">Syncing Teams...</p>
+      </div>
     </div>
   );
 
   return (
     <div className="max-w-5xl mx-auto space-y-8">
-      {/* Header Section */}
+      {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h2 className="text-3xl font-bold text-slate-800">Your Groups</h2>
-          <p className="text-slate-500">Manage your collective study streaks.</p>
+          <h2 className="text-3xl font-bold text-slate-800 tracking-tight">Your Groups</h2>
+          <p className="text-slate-500 font-medium">Manage your collective study streaks.</p>
         </div>
         <Button 
           onClick={() => setShowModal(true)}
-          className="bg-orange-600 hover:bg-orange-700 text-white rounded-2xl px-6 py-6 font-bold shadow-lg shadow-orange-100 flex items-center gap-2"
+          className="bg-orange-600 hover:bg-orange-700 text-white rounded-2xl px-8 py-7 font-bold shadow-lg shadow-orange-100 flex items-center gap-2 transition-all active:scale-95"
         >
-          <Plus size={20} /> Create or Join Group
+          <Plus size={20} /> Create or Join
         </Button>
       </div>
 
@@ -102,32 +109,38 @@ export default function GroupsPage() {
           </div>
           <h3 className="text-xl font-bold text-slate-700 mb-2">No Groups Yet</h3>
           <p className="text-slate-400 max-w-sm mx-auto mb-8 text-sm">
-            StudyBit is better with friends. Join a group or create one to start a streak.
+            Join a group or create one to start your collective streak.
           </p>
-          <Button onClick={() => setShowModal(true)} variant="outline" className="rounded-xl border-slate-200 text-slate-600">
+          <Button onClick={() => setShowModal(true)} variant="outline" className="rounded-xl border-slate-200 text-slate-600 font-bold">
             Get Started
           </Button>
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {groups.map((group) => (
-            <div key={group.id} className="bg-white rounded-[32px] p-6 border border-slate-100 shadow-sm hover:border-orange-200 transition-all group">
+            <div key={group.id} className="bg-white rounded-[32px] p-7 border border-slate-100 shadow-sm hover:shadow-xl hover:shadow-orange-100/20 hover:border-orange-200 transition-all group relative overflow-hidden">
               <div className="flex justify-between items-start mb-6">
                 <div className="w-12 h-12 bg-orange-50 rounded-2xl flex items-center justify-center">
                   <Users className="text-orange-600" size={24} />
                 </div>
-                <div className="flex items-center gap-1.5 px-3 py-1 bg-orange-100 text-orange-700 rounded-full text-[10px] font-black uppercase tracking-wider">
-                  <Flame size={14} className="fill-current" /> {group.group_streak} Day Streak
+                
+                {/* Streak Badge with pulsing flame */}
+                <div className="flex items-center gap-1.5 px-3 py-1.5 bg-orange-100 text-orange-700 rounded-full text-[10px] font-black uppercase tracking-wider relative overflow-hidden">
+                   <div className="absolute inset-0 bg-white/40 animate-pulse" />
+                   <Flame size={14} className="fill-current relative z-10" /> 
+                   <span className="relative z-10">{group.group_streak} Day Streak</span>
                 </div>
               </div>
               
-              <h3 className="text-xl font-bold text-slate-800 mb-1">{group.name}</h3>
-              <p className="text-[10px] font-mono text-slate-400 mb-6 uppercase tracking-tight">ID: {group.id.slice(0, 8)}...</p>
+              <h3 className="text-xl font-bold text-slate-800 mb-1 group-hover:text-orange-600 transition-colors">{group.name}</h3>
+              <p className="text-[10px] font-mono text-slate-400 mb-6 uppercase tracking-tight">
+                ID: {group.id.slice(0, 8)}...
+              </p>
               
               <div className="flex items-center gap-2">
                 <Link 
                   href={`/dashboard/groups/${group.id}`}
-                  className="flex-1 bg-slate-50 hover:bg-orange-50 text-slate-600 hover:text-orange-600 font-bold py-3 rounded-xl text-[10px] uppercase transition-colors flex items-center justify-center gap-2"
+                  className="flex-1 bg-slate-500 text-white font-bold py-3 rounded-xl text-[10px] uppercase transition-all flex items-center justify-center gap-2 hover:bg-orange-600 hover:shadow-lg hover:shadow-orange-200"
                 >
                   View Pulse <ArrowRight size={14} />
                 </Link>
@@ -144,19 +157,18 @@ export default function GroupsPage() {
         </div>
       )}
 
-      {/* Join/Create Modal */}
+      {/* Modal for Join/Create */}
       {showModal && (
-        <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-[40px] w-full max-w-md p-8 md:p-10 shadow-2xl animate-in fade-in zoom-in duration-200">
-            <div className="flex justify-between items-center mb-8">
-              <h3 className="text-2xl font-bold text-slate-800">Add Group</h3>
-              <button onClick={() => setShowModal(false)} className="text-slate-400 hover:text-slate-600">✕</button>
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-[40px] w-full max-w-md p-10 shadow-2xl animate-in fade-in zoom-in duration-200">
+            <div className="flex justify-between items-center mb-10">
+              <h3 className="text-2xl font-bold text-slate-800 tracking-tight">Manage Groups</h3>
+              <button onClick={() => setShowModal(false)} className="text-slate-400 hover:text-slate-600 font-bold">✕</button>
             </div>
 
-            <div className="space-y-8">
-              {/* Join Section */}
+            <div className="space-y-10">
               <div>
-                <label className="block text-[10px] font-black text-slate-400 mb-3 uppercase tracking-widest">Join Existing</label>
+                <label className="block text-[10px] font-black text-slate-400 mb-3 uppercase tracking-widest">Join with ID</label>
                 <div className="flex gap-2">
                   <div className="flex-1">
                     <InputField 
@@ -169,7 +181,7 @@ export default function GroupsPage() {
                   <Button 
                     onClick={handleJoin} 
                     disabled={isSubmitting || !joinId}
-                    className="bg-slate-900 text-white h-14 rounded-2xl px-6 font-bold"
+                    className="bg-slate-900 text-white h-14 rounded-2xl px-6 font-bold hover:bg-orange-600 transition-colors"
                   >
                     {isSubmitting ? <Loader2 className="animate-spin" /> : "Join"}
                   </Button>
@@ -181,11 +193,10 @@ export default function GroupsPage() {
                 <div className="relative flex justify-center text-[10px] uppercase font-bold text-slate-300 bg-white px-4 tracking-[0.2em]">OR</div>
               </div>
 
-              {/* Create Section */}
               <div>
-                <label className="block text-[10px] font-black text-slate-400 mb-3 uppercase tracking-widest">Create New</label>
+                <label className="block text-[10px] font-black text-slate-400 mb-3 uppercase tracking-widest">Create New Team</label>
                 <InputField 
-                  placeholder="e.g. VSU Dev Team" 
+                  placeholder="e.g. VSU Study Squad" 
                   icon={<Plus size={18} />} 
                   value={newGroupName} 
                   onChange={(e) => setNewGroupName(e.target.value)}
@@ -193,9 +204,9 @@ export default function GroupsPage() {
                 <Button 
                   onClick={handleCreate} 
                   disabled={isSubmitting || !newGroupName}
-                  className="w-full mt-4 bg-orange-600 hover:bg-orange-700 text-white h-14 rounded-2xl font-bold shadow-lg shadow-orange-100"
+                  className="w-full mt-4 bg-orange-600 hover:bg-orange-700 text-white h-15 rounded-2xl font-bold shadow-lg shadow-orange-100 transition-all active:scale-95"
                 >
-                  {isSubmitting ? <Loader2 className="animate-spin" /> : "Create Group"}
+                  {isSubmitting ? <Loader2 className="animate-spin" /> : "Start New Group"}
                 </Button>
               </div>
             </div>
